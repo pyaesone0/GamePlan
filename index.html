@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GamePlan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+        body {
+            font-family: "Inter", sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .header-title {
+            font-size: 1.52rem;
+            font-weight: 700;
+        }
+        .header-subtitle {
+            font-size: 1rem;
+            color: #6b7280;
+        }
+        .schedule-table {
+            border-collapse: collapse;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+            table-layout: fixed;
+            width: 100%;
+        }
+        .schedule-table th,
+        .schedule-table td {
+            border: 1px solid #e5e7eb;
+            text-align: center;
+            height: 4rem; 
+            width: calc(100% / 8);
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            padding: 2px;
+            vertical-align: middle;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .schedule-table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+        .time-label {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .slot {
+            transition: all 0.3s ease;
+        }
+        .slot.available {
+            background-color: #f0fdf4;
+        }
+        .slot.taken {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            font-weight: 500;
+            font-size: 0.8rem;
+            line-height: 1.2;
+        }
+        .slot.taken:hover {
+            background-color: #fecaca;
+        }
+        .slot.available:hover {
+            background-color: #dcfce7;
+        }
+
+        /* Nav Menu */
+        #sideNav {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .nav-open {
+            transform: translateX(0) !important;
+        }
+
+        /* Modal */
+        #modal {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+
+        .form-input {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn-green {
+            background-color: #22c55e;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-green:hover {
+            background-color: #16a34a;
+        }
+
+        .btn-red {
+            background-color: #ef4444;
+            color: white;
+        }
+        .btn-red:hover {
+            background-color: #dc2626;
+        }
+
+        .btn-gray {
+            background-color: #6b7280;
+            color: white;
+        }
+        .btn-gray:hover {
+            background-color: #4b5563;
+        }
+
+        .licensed-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background-color: #dcfce7;
+            color: #16a34a;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.9rem;
+        }
+
+        /* Blue Buttons for week navigation */
+        .btn-blue {
+            background-color: #3b82f6; /* Tailwind blue-500 */
+            color: white;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            user-select: none;
+        }
+        .btn-blue:hover {
+            background-color: #2563eb; /* Tailwind blue-600 */
+        }
+        .week-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0 0.5rem;
+        }
+        .week-title {
+            font-weight: 700;
+            font-size: 1.125rem;
+            text-align: center;
+            flex-grow: 1;
+        }
+        .week-subtitle {
+            font-size: 0.875rem;
+            color: #6b7280;
+            text-align: center;
+            margin-top: 0.25rem;
+            grid-column: 2 / 3;
+        }
+        .week-nav-container {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <div id="app" class="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
+        <header class="p-4 grid grid-cols-3 items-center border-b">
+            <div>
+                <button id="menuBtn" class="text-3xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            <div class="text-center">
+                <h1 class="header-title">စွမ်းလင်းထက်</h1>
+                <p class="header-subtitle">အချိန်ဇယား</p>
+            </div>
+            <div class="flex justify-end">
+                <div id="licensed-indicator" class="hidden">
+                    <div class="licensed-badge">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Licensed</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main id="mainContent" class="p-4">
+            <div class="week-nav-container">
+                <div class="week-nav">
+                    <button id="prevWeekBtn" class="btn-blue" aria-label="Previous Week">
+                        <i class="fas fa-chevron-left"></i> Back
+                    </button>
+                    <div>
+                        <div id="monthYearTitle" class="week-title">Month Year</div>
+                        <div id="weekDateRange" class="week-subtitle">Date Range</div>
+                    </div>
+                    <button id="nextWeekBtn" class="btn-blue" aria-label="Next Week">
+                        Next<i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="scheduleView">
+                <div class="w-full">
+                    <table id="scheduleTable" class="w-full schedule-table">
+                        </table>
+                </div>
+
+                <div class="mt-8 text-center">
+                    <p class="text-lg font-medium">
+                        ဘိုကင်တင်ရန် -
+                        <a href="tel:09-696900531" class="text-blue-600">09-696900531</a>
+                    </p>
+                    <a
+                        href="tel:09-696900531"
+                        class="btn-green mt-4 text-xl px-8 py-3"
+                    >
+                        <i class="fas fa-phone-alt"></i>
+                        <span>Call Now</span>
+                    </a>
+                </div>
+            </div>
+
+            <div id="loginView" class="hidden relative pt-4">
+                <button id="backToTableBtn" class="absolute top-0 right-0 text-2xl text-gray-500 hover:text-gray-800 p-4" aria-label="Back to schedule">
+                    <i class="fas fa-table-cells"></i>
+                </button>
+                <h2 class="text-2xl font-bold text-center mb-8">Admin Log In</h2>
+                <form id="loginForm" class="space-y-6">
+                    <div class="grid grid-cols-3 items-center">
+                        <label for="username" class="font-semibold">Username</label>
+                        <span class="text-center">-</span>
+                        <input type="text" id="username" class="form-input col-span-1" required />
+                    </div>
+                    <div class="grid grid-cols-3 items-center">
+                        <label for="phone" class="font-semibold">Ph no</label>
+                        <span class="text-center">-</span>
+                        <input type="text" id="phone" class="form-input col-span-1" required />
+                    </div>
+                    <div class="grid grid-cols-3 items-center">
+                        <label for="password" class="font-semibold">Password</label>
+                        <span class="text-center">-</span>
+                        <input type="password" id="password" class="form-input col-span-1" required />
+                    </div>
+                    <div class="pt-4 text-center">
+                        <button type="submit" class="btn-green w-1/2 justify-center text-lg">
+                            Log In
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <div
+        id="sideNav"
+        class="fixed inset-0 bg-black bg-opacity-40 z-40 transform -translate-x-full"
+    >
+        <div class="w-64 bg-white h-full p-6">
+            <h3 class="text-xl font-bold mb-8">Menu</h3>
+            <ul id="navLinks" class="space-y-4">
+                <li>
+                    <a href="#" id="loginLink" class="text-lg hover:text-blue-600"
+                        >Admin Log In</a
+                    >
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div
+        id="modal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none"
+    >
+        <div
+            id="modalContent"
+            class="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm text-center transform scale-95"
+        >
+            </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // --- STATE & CONFIG ---
+            const ADMIN_DETAILS = {
+                username: "admin",
+                phone: "09-696900531",
+                password: "admin",
+            };
+
+            let currentMonday;
+
+            const daysShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+            const times = [
+                "8-9", "9-10", "10-11", "11-12", "12-1", "1-2", "2-3", "3-4", "4-5", "5-6", "6-7",
+            ];
+
+            let state = {
+                isAdmin: false,
+                schedule: {},
+            };
+
+            let longPressTimer;
+            const LONG_PRESS_DURATION = 2000;
+
+            // --- DOM ELEMENTS ---
+            const scheduleTable = document.getElementById("scheduleTable");
+            const mainContent = document.getElementById("mainContent");
+            const scheduleView = document.getElementById("scheduleView");
+            const loginView = document.getElementById("loginView");
+            const loginForm = document.getElementById("loginForm");
+            const menuBtn = document.getElementById("menuBtn");
+            const sideNav = document.getElementById("sideNav");
+            const modal = document.getElementById("modal");
+            const modalContent = document.getElementById("modalContent");
+            const navLinks = document.getElementById("navLinks");
+            const licensedIndicator = document.getElementById("licensed-indicator");
+            const prevWeekBtn = document.getElementById("prevWeekBtn");
+            const nextWeekBtn = document.getElementById("nextWeekBtn");
+            const monthYearTitle = document.getElementById("monthYearTitle");
+            const weekDateRange = document.getElementById("weekDateRange");
+            // MODIFICATION: Get references to new/affected elements
+            const weekNavContainer = document.querySelector(".week-nav-container");
+            const backToTableBtn = document.getElementById("backToTableBtn");
+
+
+            // --- UTILITIES ---
+            function getMonday(date) {
+                const d = new Date(date);
+                const day = d.getDay();
+                const diff = day === 0 ? -6 : 1 - day;
+                d.setDate(d.getDate() + diff);
+                d.setHours(0, 0, 0, 0);
+                return d;
+            }
+
+            function formatDateShort(date) {
+                const day = date.getDate();
+                const monthNamesShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sept","Oct","Nov","Dec"];
+                const month = monthNamesShort[date.getMonth()];
+                return `${day} ${month}`;
+            }
+
+            function formatMonthYear(date) {
+                const monthNamesFull = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+                const month = monthNamesFull[date.getMonth()];
+                const year = date.getFullYear();
+                return `${month} ${year}`;
+            }
+
+            // --- DATA HANDLING ---
+            function loadData() {
+                const savedSchedule = localStorage.getItem("bookingSchedule");
+                const savedAdminStatus = localStorage.getItem("isAdmin");
+                if (savedSchedule) {
+                    state.schedule = JSON.parse(savedSchedule);
+                } else {
+                    initializeScheduleForWeek();
+                    state.schedule["Tue-8-9"] = {
+                        booked: true,
+                        name: "A very long name that will test the overflow",
+                        phone: "09123456789",
+                    };
+                    state.schedule["Tue-9-10"] = { booked: false, name: null, phone: null };
+                }
+
+                if (savedAdminStatus === "true") {
+                    state.isAdmin = true;
+                }
+                saveData();
+            }
+
+            function initializeScheduleForWeek() {
+                state.schedule = {};
+                daysShort.forEach((day) => {
+                    times.forEach((time) => {
+                        const id = `${day}-${time}`;
+                        state.schedule[id] = { booked: false, name: null, phone: null };
+                    });
+                });
+            }
+
+            function saveData() {
+                localStorage.setItem("bookingSchedule", JSON.stringify(state.schedule));
+                localStorage.setItem("isAdmin", state.isAdmin);
+            }
+            
+            function getCurrentWeekDays(mondayDate) {
+                const days = [];
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(mondayDate);
+                    d.setDate(d.getDate() + i);
+                    days.push({ dayShort: daysShort[i], dateObj: d });
+                }
+                return days;
+            }
+
+            // --- UI RENDERING ---
+            function renderTable() {
+                if (!currentMonday) {
+                    currentMonday = getMonday(new Date());
+                }
+                const weekDays = getCurrentWeekDays(currentMonday);
+
+                let html = "<thead><tr><th></th>";
+                weekDays.forEach(({ dayShort, dateObj }) => {
+                    html += `<th>${dayShort} <br /><span style="font-weight: normal; font-size: 0.75rem; color: #6b7280;">${dateObj.getDate()}</span></th>`;
+                });
+                html += "</tr></thead><tbody>";
+
+                times.forEach((time) => {
+                    html += `<tr><td class="time-label">${time}</td>`;
+                    weekDays.forEach(({ dayShort }) => {
+                        const id = `${dayShort}-${time}`;
+                        const slotData = state.schedule[id];
+                        const isBooked = slotData && slotData.booked;
+                        html += `<td id="${id}" class="slot ${isBooked ? "taken" : "available"}" data-day="${dayShort}" data-time="${time}">`;
+                        if (isBooked) {
+                            html += `<span>${slotData.name}</span>`;
+                        }
+                        html += "</td>";
+                    });
+                    html += "</tr>";
+                });
+
+                html += "</tbody>";
+                scheduleTable.innerHTML = html;
+                addSlotEventListeners();
+            }
+
+            function updateNav() {
+                if (state.isAdmin) {
+                    navLinks.innerHTML = `<li><a href="#" id="logoutLink" class="text-lg hover:text-red-500">Log Out</a></li>`;
+                    licensedIndicator.classList.remove("hidden");
+                    document.getElementById("logoutLink").addEventListener("click", handleLogout);
+                } else {
+                    navLinks.innerHTML = `<li><a href="#" id="loginLink" class="text-lg hover:text-blue-600">Admin Log In</a></li>`;
+                    licensedIndicator.classList.add("hidden");
+                    document.getElementById("loginLink").addEventListener("click", showLoginView);
+                }
+            }
+
+            function updateWeekHeader() {
+                if (!currentMonday) return;
+                monthYearTitle.textContent = formatMonthYear(currentMonday);
+                const weekDays = getCurrentWeekDays(currentMonday);
+                const startDate = weekDays[0].dateObj;
+                const endDate = weekDays[6].dateObj;
+                const startDay = startDate.getDate();
+                const endDay = endDate.getDate();
+                let startMonthShort = formatDateShort(startDate).split(" ")[1];
+                let endMonthShort = formatDateShort(endDate).split(" ")[1];
+                let dateRangeStr = (startMonthShort === endMonthShort) 
+                    ? `${startDay} - ${endDay} ${endMonthShort}`
+                    : `${startDay} ${startMonthShort} - ${endDay} ${endMonthShort}`;
+                weekDateRange.textContent = dateRangeStr;
+            }
+
+            // --- MODAL LOGIC ---
+            function showModal(slotId) {
+                const slotData = state.schedule[slotId];
+                const day = slotId.split("-")[0];
+                const time = slotId.split("-").slice(1).join("-");
+                let content = "";
+
+                if (state.isAdmin) {
+                    if (slotData.booked) {
+                        content = `
+                            <h3 class="text-xl font-bold mb-1">${slotData.name}</h3>
+                            <p class="text-gray-500 mb-4">${day}, ${time}</p>
+                            <a href="tel:${slotData.phone}" id="phoneLink" class="block bg-blue-100 text-blue-800 font-semibold py-3 px-4 rounded-lg mb-4">
+                               Ph no - ${slotData.phone}
+                            </a>
+                            <p class="text-xs text-gray-400 mb-4 -mt-2">Click to call, hold for 2s to copy.</p>
+                            <button id="cancelBookingBtn" class="w-full py-3 rounded-lg font-semibold btn-red">ဖျက်ရန် (Cancel)</button>
+                        `;
+                    } else {
+                        content = `
+                            <h3 class="text-xl font-bold mb-2">အချိန်လွတ်သည် (Available)</h3>
+                            <p class="text-gray-500 mb-4">${day}, ${time}</p>
+                            <form id="adminBookingForm" class="space-y-4">
+                                <input type="text" id="bookName" placeholder="Name" class="form-input" required>
+                                <input type="text" id="bookPhone" placeholder="Ph-no" class="form-input" required>
+                                <div class="mt-4 space-y-2">
+                                    <button type="submit" class="w-full py-3 rounded-lg font-semibold btn-green">သိမ်းမည် (Save)</button>
+                                    <button type="button" id="closeModalBtn" class="w-full py-3 rounded-lg font-semibold btn-gray">Close</button>
+                                </div>
+                            </form>
+                        `;
+                    }
+                } else {
+                    if (slotData.booked) {
+                        content = `
+                            <h3 class="text-xl font-bold mb-1">${slotData.name}</h3>
+                            <p class="text-gray-500 mb-4">${day}, ${time}</p>
+                            <button id="closeModalBtn" class="w-full py-3 rounded-lg font-semibold btn-gray">Close</button>
+                        `;
+                    } else {
+                        content = `
+                            <h3 class="text-xl font-bold mb-2">အချိန်လွတ်သည် (Available)</h3>
+                            <p class="text-gray-500 mb-4">${day}, ${time}</p>
+                            <div class="space-y-3 mt-6">
+                                <a href="tel:${ADMIN_DETAILS.phone}" class="w-full py-3 rounded-lg font-semibold btn-green">
+                                   ခေါ်ဆိုရန် (Book Now)
+                                </a>
+                                <button id="closeModalBtn" class="w-full py-3 rounded-lg font-semibold btn-gray">Close</button>
+                            </div>
+                        `;
+                    }
+                }
+                modalContent.innerHTML = content;
+                openModal();
+                addModalEventListeners(slotId);
+            }
+
+            function openModal() {
+                modal.classList.remove("opacity-0", "pointer-events-none");
+                modalContent.classList.remove("scale-95");
+            }
+
+            function closeModal() {
+                modal.classList.add("opacity-0", "pointer-events-none");
+                modalContent.classList.add("scale-95");
+            }
+
+            function copyToClipboard(text) {
+                navigator.clipboard.writeText(text)
+                    .then(() => alert("Phone number copied to clipboard!"))
+                    .catch((err) => console.error("Failed to copy: ", err));
+            }
+
+            // --- EVENT HANDLERS ---
+            function addSlotEventListeners() {
+                document.querySelectorAll(".slot").forEach((slot) => {
+                    slot.addEventListener("click", () => showModal(slot.id));
+                });
+            }
+
+            function addModalEventListeners(slotId) {
+                const slotData = state.schedule[slotId];
+                const closeModalBtn = document.getElementById("closeModalBtn");
+                if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
+
+                const cancelBookingBtn = document.getElementById("cancelBookingBtn");
+                if (cancelBookingBtn) {
+                    cancelBookingBtn.addEventListener("click", () => {
+                        state.schedule[slotId] = { booked: false, name: null, phone: null };
+                        saveData(); renderTable(); closeModal();
+                    });
+                }
+
+                const adminBookingForm = document.getElementById("adminBookingForm");
+                if (adminBookingForm) {
+                    adminBookingForm.addEventListener("submit", (e) => {
+                        e.preventDefault();
+                        const name = document.getElementById("bookName").value;
+                        const phone = document.getElementById("bookPhone").value;
+                        if (name && phone) {
+                            state.schedule[slotId] = { booked: true, name: name, phone: phone };
+                            saveData(); renderTable(); closeModal();
+                        }
+                    });
+                }
+
+                const phoneLink = document.getElementById("phoneLink");
+                if (phoneLink) {
+                    phoneLink.addEventListener("mousedown", (e) => { longPressTimer = setTimeout(() => { e.preventDefault(); copyToClipboard(slotData.phone); }, LONG_PRESS_DURATION); });
+                    phoneLink.addEventListener("mouseup", () => clearTimeout(longPressTimer));
+                    phoneLink.addEventListener("mouseleave", () => clearTimeout(longPressTimer));
+                    phoneLink.addEventListener("touchstart", (e) => { longPressTimer = setTimeout(() => { e.preventDefault(); copyToClipboard(slotData.phone); }, LONG_PRESS_DURATION); }, { passive: false });
+                    phoneLink.addEventListener("touchend", () => clearTimeout(longPressTimer));
+                }
+            }
+
+            function toggleNav() {
+                sideNav.classList.toggle("-translate-x-full");
+            }
+
+            // MODIFICATION: Functions to show/hide views now also control week navigation visibility
+            function showLoginView(e) {
+                if (e) e.preventDefault();
+                scheduleView.classList.add("hidden");
+                loginView.classList.remove("hidden");
+                weekNavContainer.classList.add("hidden"); // Hide week nav
+                toggleNav();
+            }
+
+            function showScheduleView() {
+                loginView.classList.add("hidden");
+                scheduleView.classList.remove("hidden");
+                weekNavContainer.classList.remove("hidden"); // Show week nav
+                loginForm.reset();
+            }
+
+            function handleLogin(e) {
+                e.preventDefault();
+                const username = document.getElementById("username").value;
+                const phone = document.getElementById("phone").value;
+                const password = document.getElementById("password").value;
+
+                if (username === ADMIN_DETAILS.username && phone === ADMIN_DETAILS.phone && password === ADMIN_DETAILS.password) {
+                    state.isAdmin = true;
+                    saveData();
+                    updateNav();
+                    showScheduleView();
+                    renderTable();
+                } else {
+                    alert("Invalid credentials. Please try again.");
+                }
+            }
+
+            function handleLogout(e) {
+                e.preventDefault();
+                state.isAdmin = false;
+                saveData();
+                updateNav();
+                renderTable();
+                toggleNav();
+            }
+
+            // --- WEEK NAVIGATION ---
+            function goToPreviousWeek() {
+                currentMonday.setDate(currentMonday.getDate() - 7);
+                renderTable(); updateWeekHeader();
+            }
+            function goToNextWeek() {
+                currentMonday.setDate(currentMonday.getDate() + 7);
+                renderTable(); updateWeekHeader();
+            }
+
+            // --- INITIALIZATION ---
+            function init() {
+                currentMonday = getMonday(new Date());
+                loadData();
+                renderTable();
+                updateNav();
+                updateWeekHeader();
+
+                menuBtn.addEventListener("click", toggleNav);
+                sideNav.addEventListener("click", (e) => { if (e.target === sideNav) { toggleNav(); } });
+                loginForm.addEventListener("submit", handleLogin);
+                modal.addEventListener("click", (e) => { if (e.target === modal) { closeModal(); } });
+                prevWeekBtn.addEventListener("click", goToPreviousWeek);
+                nextWeekBtn.addEventListener("click", goToNextWeek);
+                
+                // MODIFICATION: Add event listener for the new back button
+                backToTableBtn.addEventListener("click", showScheduleView);
+            }
+
+            init();
+        });
+    </script>
+</body>
+</html>
